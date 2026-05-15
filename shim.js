@@ -38,3 +38,9 @@ if (typeof global.TextEncoder === 'undefined') {
 if (typeof global.TextDecoder === 'undefined') {
   global.TextDecoder = TextDecoder;
 }
+
+// Polyfill for localStorage
+import AsyncStorage from '@react-native-async-storage/async-storage';
+if (typeof global.localStorage === 'undefined') {
+  global.localStorage = AsyncStorage;
+}

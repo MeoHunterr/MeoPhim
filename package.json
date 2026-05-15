@@ -11,6 +11,7 @@
     "@react-native-async-storage/async-storage": "^1.21.0",
     "@react-navigation/native": "^6.1.9",
     "@react-navigation/native-stack": "^6.9.17",
+    "asyncstorage-down": "^4.2.0",
     "axios": "^1.6.2",
     "buffer": "^6.0.3",
     "events": "^3.3.0",

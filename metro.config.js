@@ -1,5 +1,6 @@
 const {getDefaultConfig, mergeConfig} = require('@react-native/metro-config');
 const nodeLibs = require('node-libs-react-native');
+const path = require('path');
 
 /**
  * Metro configuration
@@ -13,6 +14,7 @@ const config = {
       ...nodeLibs,
       net: require.resolve('react-native-tcp-socket'),
       dgram: require.resolve('react-native-udp'),
+      'asyncstorage-down': path.resolve(__dirname, 'node_modules/asyncstorage-down'),
     },
   },
 };

@@ -52,6 +52,9 @@ jobs:
       - name: Nodeify Node Modules
         run: npx rn-nodeify --install --hack --force
 
+      - name: Install Extra Dependencies
+        run: npm install asyncstorage-down --save-dev --legacy-peer-deps
+
       - name: Cache CocoaPods
         uses: actions/cache@v4
         with:
@@ -79,7 +82,8 @@ jobs:
             --dev false \
             --entry-file index.js \
             --bundle-output ios/main.jsbundle \
-            --assets-dest ios/assets
+            --assets-dest ios/assets \
+            --reset-cache
 
       - name: Configure Xcode Build Settings
         run: |
