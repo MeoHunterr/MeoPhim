@@ -1,67 +1,55 @@
-require_relative '../node_modules/react-native/scripts/react_native_pods'
-require_relative '../node_modules/@react-native-community/cli-platform-ios/native_modules'
+# Resolve react_native_pods.rb with node to allow for hoisting
+require Pod::Executable.execute_command('node', ['-p',
+  'require.resolve(
+    "react-native/scripts/react_native_pods.rb",
+    {paths: [process.argv[1]]},
+  )', __dir__]).strip
 
-platform :ios, '16.0'
-install! 'cocoapods', :deterministic_uuids => false
+platform :ios, min_ios_version_supported
+prepare_react_native_project!
 
-# BẮT BUỘC PHẢI CÓ DÒNG NÀY ĐỂ COCOAPODS TÌM ĐƯỢC PROJECT
-project 'MeoPhim.xcodeproj'
+# If you are using a `react-native-flipper` your iOS build will fail when `NO_FLIPPER=1` is set.
+# because `react-native-flipper` depends on (FlipperKit,...) that will be excluded
+#
+# To fix this you can also exclude `react-native-flipper` using a `react-native.config.js`
+# ```js
+# module.exports = {
+#   dependencies: {
+#     ...(process.env.NO_FLIPPER ? { 'react-native-flipper': { platforms: { ios: null } } } : {}),
+# ```
+flipper_config = ENV['NO_FLIPPER'] == "1" ? FlipperConfiguration.disabled : FlipperConfiguration.enabled
 
-target 'MeoPhim' do
+linkage = ENV['USE_FRAMEWORKS']
+if linkage != nil
+  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
+  use_frameworks! :linkage => linkage.to_sym
+end
+
+target 'MeoTemp' do
   config = use_native_modules!
-
-  # Flags change depending on the env values.
-  flags = get_default_flags()
 
   use_react_native!(
     :path => config[:reactNativePath],
-    # to enable hermes on iOS, change `false` to `true` and then install pods
-    :hermes_enabled => flags[:hermes_enabled],
-    :fabric_enabled => flags[:fabric_enabled],
-    # is an initialization script used for apps
+    # Enables Flipper.
+    #
+    # Note that if you have use_frameworks! enabled, Flipper will not work and
+    # you should disable the next line.
+    :flipper_configuration => flipper_config,
+    # An absolute path to your application root.
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
-  target 'MeoPhimTests' do
+  target 'MeoTempTests' do
     inherit! :complete
     # Pods for testing
   end
 
   post_install do |installer|
-    # GIỮ NGUYÊN HÀM MẶC ĐỊNH CỦA REACT NATIVE
+    # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/react_native_pods.rb#L197-L202
     react_native_post_install(
       installer,
       config[:reactNativePath],
       :mac_catalyst_enabled => false
     )
-
-    # 1. Ép tất cả các Pods về iOS 16.0
-    installer.pods_project.targets.each do |target|
-      target.build_configurations.each do |config|
-        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
-      end
-    end
-
-    # 2. HACK TARGET CHÍNH (MeoPhim) ĐỂ FIX LỖI ARM64 VÀ COREAUDIO
-    installer.aggregate_targets.each do |aggregate_target|
-      aggregate_target.user_project.targets.each do |target|
-        if target.name == 'MeoPhim'
-          target.build_configurations.each do |config|
-            config.build_settings['ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES'] = 'YES'
-            
-            config.build_settings['LIBRARY_SEARCH_PATHS'] ||= ['$(inherited)']
-            config.build_settings['LIBRARY_SEARCH_PATHS'] << '"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)"'
-            config.build_settings['LIBRARY_SEARCH_PATHS'] << '"$(SDKROOT)/usr/lib/swift"'
-            
-            config.build_settings['OTHER_LDFLAGS'] ||= ['$(inherited)']
-            config.build_settings['OTHER_LDFLAGS'] << '-ObjC' << '-lc++'
-            config.build_settings['OTHER_LDFLAGS'] << '-framework' << 'CoreAudio'
-            config.build_settings['OTHER_LDFLAGS'] << '-framework' << 'AudioToolbox'
-            config.build_settings['OTHER_LDFLAGS'] << '-framework' << 'AVFoundation'
-          end
-        end
-      end
-      aggregate_target.user_project.save
-    end
   end
 end
