@@ -35,15 +35,19 @@ target 'MeoPhim' do
       end
 
       target.build_configurations.each do |config|
-        # Sửa lỗi CoreAudioTypes và Symbols
-        config.build_settings['OTHER_LDFLAGS'] ||= ['$(inherited)', '-lc++', '-lsqlite3', '-lz', '-framework CoreAudio', '-framework AudioToolbox', '-framework AVFoundation', '-Wl,-weak_framework,CoreAudioTypes']
+        # Sửa lỗi Linking và Frameworks hệ thống
+        config.build_settings['OTHER_LDFLAGS'] ||= ['$(inherited)']
+        config.build_settings['OTHER_LDFLAGS'] += ['-lc++', '-lsqlite3', '-lz', '-framework CoreAudio', '-framework AudioToolbox', '-framework AVFoundation', '-Wl,-weak_framework,CoreAudioTypes', '-Wl,-flat_namespace,-undefined,suppress']
         
         # Thêm LIBRARY_SEARCH_PATHS để tìm đúng Swift runtime
-        config.build_settings['LIBRARY_SEARCH_PATHS'] ||= ['$(inherited)', '"$(SDKROOT)/usr/lib/swift"', '"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)"']
+        config.build_settings['LIBRARY_SEARCH_PATHS'] ||= ['$(inherited)']
+        config.build_settings['LIBRARY_SEARCH_PATHS'] += ['"$(SDKROOT)/usr/lib/swift"', '"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)"']
         
-        # Đảm bảo build đúng cho máy thật (iPhone)
+        # Cấu hình Build cho TrollStore (No stripping)
         config.build_settings['SDKROOT'] = 'iphoneos'
         config.build_settings['ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES'] = 'YES'
+        config.build_settings['DEAD_CODE_STRIPPING'] = 'NO'
+        config.build_settings['STRIP_INSTALLED_PRODUCT'] = 'NO'
       end
     end
   end
