@@ -66,6 +66,11 @@ jobs:
             --assets-dest ios/assets \
             --reset-cache
 
+      - name: Ensure Dummy.swift Exists
+        run: |
+          mkdir -p ios/MeoPhim
+          echo "import Foundation" > ios/MeoPhim/Dummy.swift
+
       - name: Fix Boost Checksum & Install CocoaPods
         run: |
           # URL gốc của JFrog đang bị sập/trả về file lỗi HTML.
@@ -83,36 +88,6 @@ jobs:
           pod cache clean --all
           pod install --repo-update
 
-      - name: Configure Xcode Project (Swift & Linking)
-        run: |
-          ruby -e "
-          require 'xcodeproj'
-          project_path = 'ios/MeoPhim.xcodeproj'
-          project = Xcodeproj::Project.open(project_path)
-          
-          # 1. Thêm Dummy.swift vào target chính nếu chưa có
-          target = project.targets.find { |t| t.name == 'MeoPhim' }
-          group = project.main_group.find_subgroup('MeoPhim', true)
-          file_ref = group.find_file_by_path('Dummy.swift')
-          if file_ref.nil?
-            file_ref = group.new_file('Dummy.swift')
-            target.add_file_references([file_ref])
-          end
-
-          # 2. Cấu hình Build Settings cho target chính
-          target.build_configurations.each do |config|
-            config.build_settings['ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES'] = 'YES'
-            config.build_settings['DEAD_CODE_STRIPPING'] = 'NO'
-            config.build_settings['STRIP_INSTALLED_PRODUCT'] = 'NO'
-            config.build_settings['OTHER_LDFLAGS'] ||= ['$(inherited)']
-            config.build_settings['OTHER_LDFLAGS'] += ['-lc++', '-lsqlite3', '-lz', '-framework CoreAudio', '-framework AudioToolbox', '-framework AVFoundation', '-Wl,-weak_framework,CoreAudioTypes']
-            config.build_settings['LIBRARY_SEARCH_PATHS'] ||= ['$(inherited)']
-            config.build_settings['LIBRARY_SEARCH_PATHS'] += ['\"$(SDKROOT)/usr/lib/swift\"', '\"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)\"']
-          end
-          
-          project.save
-          "
-
       - name: Build App Bundle (Unsigned)
         run: |
           set -o pipefail
@@ -125,13 +100,15 @@ jobs:
             -hideShellScriptEnvironment \
             ARCHS=arm64 \
             ONLY_ACTIVE_ARCH=NO \
+            SDKROOT=iphoneos \
+            IPHONEOS_DEPLOYMENT_TARGET=16.0 \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_IDENTITY="" \
             AD_HOC_CODE_SIGNING_ALLOWED=YES \
-            IPHONEOS_DEPLOYMENT_TARGET=16.0 \
             GENERATE_INFOPLIST_FILE=YES \
-            OTHER_LDFLAGS="-Wl,-weak_framework,CoreAudioTypes -Wl,-weak_framework,CoreAudio" \
+            OTHER_LDFLAGS='$(inherited) -lc++ -lsqlite3 -lz -framework CoreAudio -framework AudioToolbox -framework AVFoundation -framework Network -Wl,-weak_framework,CoreAudioTypes' \
+            LIBRARY_SEARCH_PATHS='$(inherited) "$(SDKROOT)/usr/lib/swift" "$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)"' \
             CODE_SIGN_ENTITLEMENTS=ios/MeoPhim.entitlements \
             clean build | xcpretty
 
