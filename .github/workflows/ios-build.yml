@@ -32,20 +32,6 @@ jobs:
           npm config set legacy-peer-deps true
           npm install -g node-gyp
 
-      - name: Initialize Native iOS & Config Files
-        run: |
-          mkdir -p temp_init
-          cd temp_init
-          # Dùng npx --yes để bỏ qua mọi câu hỏi xác nhận từ terminal
-          npx --yes react-native@0.73.1 init MeoPhim --version 0.73.1 --skip-install
-          cd ..
-          
-          # 1. Copy khung Native iOS (không ghi đè Podfile chúng ta đã cấu hình)
-          rsync -a --ignore-existing temp_init/MeoPhim/ios/ ios/
-          mkdir -p ios/MeoPhim
-          
-          # 2. Xóa các file rsync ở đây vì đã tạo thủ công trong repo
-
       - name: Install Node Modules
         run: npm install --legacy-peer-deps
 
@@ -82,52 +68,6 @@ jobs:
           cd ios
           pod cache clean --all
           pod install --repo-update
-
-      - name: Inject Swift Support into Xcode Project
-        run: |
-          gem install xcodeproj
-          ruby -e "
-          require 'xcodeproj'
-          proj = Xcodeproj::Project.open('ios/MeoPhim.xcodeproj')
-          target = proj.targets.find { |t| t.name == 'MeoPhim' }
-          
-          # Tạo thư mục MeoPhim nếu chưa có
-          Dir.mkdir('ios/MeoPhim') unless Dir.exist?('ios/MeoPhim')
-          File.write('ios/MeoPhim/Dummy.swift', 'import Foundation')
-          
-          # Tìm hoặc tạo group MeoPhim
-          group = proj.main_group.children.find { |c| c.name == 'MeoPhim' || c.path == 'MeoPhim' }
-          if group.nil?
-            group = proj.main_group.new_group('MeoPhim', 'MeoPhim')
-          end
-          
-          # Đăng ký file Dummy.swift vào project và target
-          unless group.files.any? { |f| f.path == 'Dummy.swift' }
-            file_ref = group.new_file('Dummy.swift')
-            target.source_build_phase.add_file_reference(file_ref, true)
-          end
-          
-          # Cấu hình Build Settings cho target chính để Link C++ và Swift
-          target.build_configurations.each do |config|
-            config.build_settings['ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES'] = 'YES'
-            config.build_settings['OTHER_LDFLAGS'] ||= ['$(inherited)']
-            config.build_settings['OTHER_LDFLAGS'] << '-lc++'
-            config.build_settings['OTHER_LDFLAGS'] << '-ObjC'
-            config.build_settings['OTHER_LDFLAGS'] << '-framework' << 'CoreAudio'
-            config.build_settings['OTHER_LDFLAGS'] << '-framework' << 'AudioToolbox'
-            config.build_settings['OTHER_LDFLAGS'] << '-framework' << 'AVFoundation'
-            config.build_settings['OTHER_LDFLAGS'] << '-framework' << 'Network'
-            
-            config.build_settings['LIBRARY_SEARCH_PATHS'] ||= ['$(inherited)']
-            config.build_settings['LIBRARY_SEARCH_PATHS'] << '\"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)\"'
-            config.build_settings['LIBRARY_SEARCH_PATHS'] << '\"$(SDKROOT)/usr/lib/swift\"'
-            
-            config.build_settings['DEAD_CODE_STRIPPING'] = 'NO'
-            config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
-          end
-          
-          proj.save
-          "
 
       - name: Build App Bundle (Unsigned)
         run: |
