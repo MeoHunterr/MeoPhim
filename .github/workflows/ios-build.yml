@@ -33,13 +33,11 @@ jobs:
             --assets-dest ios/assets \
             --reset-cache
 
-      - name: Fix Boost Source & Checksum
+      - name: Fix Boost Source
         run: |
           cd node_modules/react-native/third-party-podspecs
-          # Sử dụng link mirror cực kỳ ổn định từ GitHub
-          sed -i.bak -e 's|https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2|https://github.com/react-native-community/boost-for-react-native/releases/download/v1.83.0-0/boost_1_83_0.tar.bz2|g' boost.podspec
-          # Cập nhật SHA256 tương ứng
-          sed -i.bak -e 's/6478edfe2f3305127cffe8caf73ea0176c53769f4bf1585be237eb30798c3b8e/1c162b579a423fa6876c6c5bc16d39ab4bc05e28898977a0a6af345f523f6357/g' boost.podspec
+          # Đổi link JFrog sập sang link Archive chính thức của Boost
+          sed -i.bak -e 's|https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2|https://archives.boost.io/release/1.83.0/source/boost_1_83_0.tar.bz2|g' boost.podspec
 
       - name: Rename Xcode Targets (MeoTemp -> MeoPhim)
         run: |
