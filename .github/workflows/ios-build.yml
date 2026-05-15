@@ -76,6 +76,22 @@ jobs:
             --bundle-output ios/main.jsbundle \
             --assets-dest ios/assets
 
+      - name: Configure Swift Standard Libraries for Main Target
+        run: |
+          ruby -e "
+          require 'xcodeproj'
+          project_path = 'ios/MeoPhim.xcodeproj'
+          project = Xcodeproj::Project.open(project_path)
+          project.targets.each do |target|
+            if target.name == 'MeoPhim'
+              target.build_configurations.each do |config|
+                config.build_settings['ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES'] = 'YES'
+              end
+            end
+          end
+          project.save
+          "
+
       - name: Build App Bundle (Unsigned)
         run: |
           set -o pipefail
@@ -90,7 +106,6 @@ jobs:
             AD_HOC_CODE_SIGNING_ALLOWED=YES \
             IPHONEOS_DEPLOYMENT_TARGET=16.0 \
             GENERATE_INFOPLIST_FILE=YES \
-            ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES=YES \
             CODE_SIGN_ENTITLEMENTS=ios/MeoPhim.entitlements \
             clean build | xcpretty
 
