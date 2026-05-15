@@ -28,6 +28,22 @@ target 'MeoPhim' do
 
     # Fix duplicate symbol arm64 (GCDAsyncSocket) and configure Swift/Linking
     installer.pods_project.targets.each do |target|
+      # Fix lỗi leveldb-library
+      if target.name == 'leveldb-library'
+        target.build_configurations.each do |config|
+          config.build_settings['SKIP_INSTALL'] = 'YES'
+        end
+      end
+
+      # Fix lỗi Resource Bundle không tìm thấy file
+      if target.respond_to?(:resource_bundle_targets)
+        target.resource_bundle_targets.each do |res_target|
+          res_target.build_configurations.each do |config|
+            config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
+          end
+        end
+      end
+
       if target.name == 'react-native-tcp-socket'
         target.build_configurations.each do |config|
           config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)', 'GCDAsyncSocket=MeoGCDAsyncSocket']
@@ -38,7 +54,7 @@ target 'MeoPhim' do
         # Ép IPHONEOS_DEPLOYMENT_TARGET về 16.0 cho tính tương thích
         config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
 
-        # Sửa lỗi Linking và Frameworks hệ thống (Dùng .join(' ') để tránh lỗi No implicit conversion of Array into String)
+        # Sửa lỗi Linking và Frameworks hệ thống
         ldflags = ['$(inherited)', '-lc++', '-lsqlite3', '-lz', '-framework CoreAudio', '-framework AudioToolbox', '-framework AVFoundation', '-Wl,-weak_framework,CoreAudioTypes', '-Wl,-flat_namespace,-undefined,suppress']
         config.build_settings['OTHER_LDFLAGS'] = ldflags.join(' ')
         
@@ -48,9 +64,15 @@ target 'MeoPhim' do
         
         # Cấu hình Build cho TrollStore (No stripping)
         config.build_settings['SDKROOT'] = 'iphoneos'
-        config.build_settings['ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES'] = 'YES'
         config.build_settings['DEAD_CODE_STRIPPING'] = 'NO'
         config.build_settings['STRIP_INSTALLED_PRODUCT'] = 'NO'
+
+        # CHỈ BẬT ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES cho Target chính
+        if target.name == 'MeoPhim'
+          config.build_settings['ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES'] = 'YES'
+        else
+          config.build_settings['ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES'] = 'NO'
+        end
       end
     end
   end

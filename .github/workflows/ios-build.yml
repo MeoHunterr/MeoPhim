@@ -70,7 +70,8 @@ jobs:
           # Thay thế URL tải Boost bằng bản backup tĩnh trên archives.boost.io để khắc phục lỗi "Unrecognized archive format"
           sed -i '' 's|https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2|https://archives.boost.io/release/1.83.0/source/boost_1_83_0.tar.bz2|g' node_modules/react-native/third-party-podspecs/boost.podspec
           
-          # Dọn dẹp cache cũ và file rác gây lỗi duplicate symbol
+          # Dọn dẹp cache cũ triệt để
+          rm -rf ~/Library/Developer/Xcode/DerivedData
           rm -rf ios/Pods
           rm -rf ios/Podfile.lock
           rm -rf ios/build
@@ -99,6 +100,8 @@ jobs:
             -configuration Release \
             -sdk iphoneos \
             -derivedDataPath build \
+            -parallelizeTargets \
+            -hideShellScriptEnvironment \
             ARCHS=arm64 \
             ONLY_ACTIVE_ARCH=NO \
             CODE_SIGNING_REQUIRED=NO \
