@@ -2,6 +2,8 @@ require_relative '../node_modules/react-native/scripts/react_native_pods'
 require_relative '../node_modules/@react-native-community/cli-platform-ios/native_modules'
 
 platform :ios, '16.0'
+project 'MeoPhim.xcodeproj'
+
 prepare_react_native_project!
 
 target 'MeoPhim' do
@@ -69,9 +71,18 @@ target 'MeoPhim' do
             config.build_settings['OTHER_LDFLAGS'] << '-ObjC'
             config.build_settings['OTHER_LDFLAGS'] << '-lc++'
             
+            # Link frameworks hệ thống cần thiết
+            config.build_settings['OTHER_LDFLAGS'] << '-framework' << 'CoreAudio'
+            config.build_settings['OTHER_LDFLAGS'] << '-framework' << 'AudioToolbox'
+            config.build_settings['OTHER_LDFLAGS'] << '-framework' << 'AVFoundation'
+            config.build_settings['OTHER_LDFLAGS'] << '-framework' << 'Network'
+            
             # Các thiết lập quan trọng cho TrollStore
             config.build_settings['DEAD_CODE_STRIPPING'] = 'NO'
             config.build_settings['STRIP_INSTALLED_PRODUCT'] = 'NO'
+            config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
+            config.build_settings['SDKROOT'] = 'iphoneos'
+            config.build_settings['ARCHS'] = 'arm64'
           end
         end
       end
