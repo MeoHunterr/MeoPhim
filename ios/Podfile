@@ -56,8 +56,8 @@ target 'MeoPhim' do
         config.build_settings['ARCHS'] = 'arm64'
         config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
 
-        # Sửa lỗi Linking và Frameworks hệ thống
-        ldflags = ['$(inherited)', '-lc++', '-lsqlite3', '-lz', '-framework CoreAudio', '-framework CoreAudioTypes', '-framework AudioToolbox', '-framework AVFoundation', '-Wl,-flat_namespace,-undefined,suppress']
+        # Sửa lỗi Linking và Frameworks hệ thống (Loại bỏ CoreAudioTypes)
+        ldflags = ['$(inherited)', '-lc++', '-lsqlite3', '-lz', '-framework CoreAudio', '-framework AudioToolbox', '-framework AVFoundation', '-Wl,-flat_namespace,-undefined,suppress']
         config.build_settings['OTHER_LDFLAGS'] = ldflags.join(' ')
         
         # Thêm LIBRARY_SEARCH_PATHS để tìm đúng Swift runtime
