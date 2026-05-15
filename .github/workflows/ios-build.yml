@@ -6,18 +6,24 @@ on:
   workflow_dispatch:
 
 env:
-  # Ép các action sử dụng Node.js 24 theo lộ trình 2026 của GitHub
+  # Ép các action sử dụng Node.js 24 theo tiêu chuẩn năm 2026
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
     name: Build iOS
     runs-on: macos-latest
+    
+    # Đảm bảo môi trường làm việc luôn ở thư mục gốc (nơi chứa package.json)
+    defaults:
+      run:
+        working-directory: .
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Khắc phục lỗi thiếu package-lock.json để setup-node cache có thể hoạt động
+      # Sửa lỗi ENOENT: Could not read package.json bằng cách đảm bảo file tồn tại và tạo lock file
       - name: Generate Package Lock
         run: npm install --package-lock-only
 
@@ -26,11 +32,10 @@ jobs:
         with:
           node-version: 24
           cache: 'npm'
-          # Chỉ định đường dẫn lock file để tránh lỗi nếu repo chưa commit file này
           cache-dependency-path: package-lock.json
 
       - name: Install Node Modules
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       - name: Cache CocoaPods
         uses: actions/cache@v4
@@ -66,14 +71,15 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
             
-      - name: Prepare TrollStore IPA (Rename for uniqueness)
+      - name: Prepare TrollStore IPA (Naming v${{ github.run_number }})
         run: |
           cd build/output
-          mv *.ipa MeoPhim-Build-${{ github.run_number }}.ipa
+          # Tìm file .ipa và đổi tên chuẩn
+          find . -name "*.ipa" -exec mv {} MeoPhim_TrollStore_v${{ github.run_number }}.ipa \;
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MeoPhim-IPA-Build-${{ github.run_number }}
-          path: build/output/MeoPhim-Build-${{ github.run_number }}.ipa
+          name: MeoPhim-Build-v${{ github.run_number }}
+          path: build/output/MeoPhim_TrollStore_v${{ github.run_number }}.ipa
           retention-days: 7
