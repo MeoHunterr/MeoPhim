@@ -76,7 +76,7 @@ jobs:
             --bundle-output ios/main.jsbundle \
             --assets-dest ios/assets
 
-      - name: Configure Swift Standard Libraries for Main Target
+      - name: Configure Xcode Build Settings
         run: |
           ruby -e "
           require 'xcodeproj'
@@ -86,6 +86,8 @@ jobs:
             if target.name == 'MeoPhim'
               target.build_configurations.each do |config|
                 config.build_settings['ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES'] = 'YES'
+                config.build_settings['DEAD_CODE_STRIPPING'] = 'NO'
+                config.build_settings['STRIP_INSTALLED_PRODUCT'] = 'NO'
               end
             end
           end
@@ -124,7 +126,10 @@ jobs:
           fi
 
           mkdir -p build/Payload
-          cp -R "$APP_PATH" build/Payload/
+          
+          # Thay cp -R bằng xcrun ditto để giữ nguyên cấu trúc Frameworks và symlinks
+          xcrun ditto "$APP_PATH" "build/Payload/$(basename "$APP_PATH")"
+          
           cd build
           zip -qr MeoPhim_TrollStore_v${{ github.run_number }}.ipa Payload
 
