@@ -69,6 +69,17 @@ jobs:
             ONLY_ACTIVE_ARCH=NO \
             clean build | xcpretty
 
+      - name: Inspect Build Result
+        run: |
+          APP_PATH=$(find build/Build/Products/Release-iphoneos -name "*.app" | head -n 1)
+          BINARY_PATH="$APP_PATH/MeoPhim"
+          SIZE=$(du -m "$BINARY_PATH" | cut -f1)
+          echo "Main Binary Size: ${SIZE}MB"
+          if [ "$SIZE" -lt 5 ]; then
+            echo "Error: Binary size is too small (${SIZE}MB). Native modules might not be linked."
+            exit 1
+          fi
+
       - name: Package IPA for TrollStore
         run: |
           APP_PATH=$(find build/Build/Products/Release-iphoneos -name "*.app" | head -n 1)
@@ -78,7 +89,7 @@ jobs:
           fi
           
           mkdir -p build/Payload
-          xcrun ditto "$APP_PATH" "build/Payload/$(basename "$APP_PATH")"
+          cp -R "$APP_PATH" build/Payload/
           cd build
           zip -qr MeoPhim_TrollStore_v${{ github.run_number }}.ipa Payload
 
