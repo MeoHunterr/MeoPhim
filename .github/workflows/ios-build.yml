@@ -98,17 +98,11 @@ jobs:
             -derivedDataPath build \
             -parallelizeTargets \
             -hideShellScriptEnvironment \
-            ARCHS=arm64 \
-            ONLY_ACTIVE_ARCH=NO \
-            SDKROOT=iphoneos \
-            IPHONEOS_DEPLOYMENT_TARGET=16.0 \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_IDENTITY="" \
             AD_HOC_CODE_SIGNING_ALLOWED=YES \
             GENERATE_INFOPLIST_FILE=YES \
-            OTHER_LDFLAGS='$(inherited) -lc++ -lsqlite3 -lz -framework CoreAudio -framework AudioToolbox -framework AVFoundation -framework Network' \
-            LIBRARY_SEARCH_PATHS='$(inherited) "$(SDKROOT)/usr/lib/swift" "$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)"' \
             CODE_SIGN_ENTITLEMENTS=ios/MeoPhim.entitlements \
             clean build | xcpretty
 

@@ -26,7 +26,7 @@ target 'MeoPhim' do
       :mac_catalyst_enabled => false
     )
 
-    # Configure all targets
+    # 1. Ép các thư viện Pods về iOS 16 và cấu hình cơ bản
     installer.pods_project.targets.each do |target|
       # Fix lỗi leveldb-library
       if target.name == 'leveldb-library'
@@ -44,37 +44,65 @@ target 'MeoPhim' do
         end
       end
 
-      if target.name == 'react-native-tcp-socket'
-        target.build_configurations.each do |config|
-          config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)', 'GCDAsyncSocket=MeoGCDAsyncSocket']
-        end
-      end
-
       target.build_configurations.each do |config|
-        # Ép tất cả target dùng SDK iPhone thật và kiến trúc arm64
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
+        config.build_settings['ONLY_ACTIVE_ARCH'] = 'NO'
         config.build_settings['SDKROOT'] = 'iphoneos'
         config.build_settings['ARCHS'] = 'arm64'
-        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
+        config.build_settings['ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES'] = 'NO'
+      end
+    end
 
-        # Sửa lỗi Linking và Frameworks hệ thống (Loại bỏ CoreAudioTypes)
-        ldflags = ['$(inherited)', '-lc++', '-lsqlite3', '-lz', '-framework CoreAudio', '-framework AudioToolbox', '-framework AVFoundation', '-Wl,-flat_namespace,-undefined,suppress']
-        config.build_settings['OTHER_LDFLAGS'] = ldflags.join(' ')
-        
-        # Thêm LIBRARY_SEARCH_PATHS để tìm đúng Swift runtime
-        lib_paths = ['$(inherited)', '"$(SDKROOT)/usr/lib/swift"', '"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)"']
-        config.build_settings['LIBRARY_SEARCH_PATHS'] = lib_paths.join(' ')
-        
-        # Cấu hình Build cho TrollStore (No stripping)
-        config.build_settings['DEAD_CODE_STRIPPING'] = 'NO'
-        config.build_settings['STRIP_INSTALLED_PRODUCT'] = 'NO'
-
-        # CHỈ BẬT ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES cho Target chính
+    # 2. HACK TRỰC TIẾP VÀO TARGET CHÍNH (MeoPhim) CỦA DỰ ÁN
+    installer.aggregate_targets.each do |aggregate_target|
+      aggregate_target.user_project.targets.each do |target|
         if target.name == 'MeoPhim'
-          config.build_settings['ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES'] = 'YES'
-        else
-          config.build_settings['ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES'] = 'NO'
+          target.build_configurations.each do |config|
+            # Bắt buộc thêm các cờ để Link C++ và Objective-C
+            # Đảm bảo OTHER_LDFLAGS là mảng để tránh lỗi chuỗi
+            ldflags = config.build_settings['OTHER_LDFLAGS']
+            if ldflags.is_a?(String)
+              ldflags = [ldflags]
+            elsif ldflags.nil?
+              ldflags = ['$(inherited)']
+            end
+
+            ldflags << '-ObjC'
+            ldflags << '-lc++'
+            ldflags << '-lsqlite3'
+            ldflags << '-lz'
+            
+            # Xử lý triệt để lỗi CoreAudio
+            ldflags << '-framework' << 'CoreAudio'
+            ldflags << '-framework' << 'AudioToolbox'
+            ldflags << '-framework' << 'AVFoundation'
+            ldflags << '-framework' << 'Network'
+            
+            config.build_settings['OTHER_LDFLAGS'] = ldflags.uniq
+            
+            # Bắt buộc nhúng thư viện Swift
+            config.build_settings['ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES'] = 'YES'
+            
+            lib_paths = config.build_settings['LIBRARY_SEARCH_PATHS']
+            if lib_paths.is_a?(String)
+              lib_paths = [lib_paths]
+            elsif lib_paths.nil?
+              lib_paths = ['$(inherited)']
+            end
+            lib_paths << '"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)"'
+            lib_paths << '"$(SDKROOT)/usr/lib/swift"'
+            config.build_settings['LIBRARY_SEARCH_PATHS'] = lib_paths.uniq
+            
+            # Chống việc Xcode tự động xóa code
+            config.build_settings['DEAD_CODE_STRIPPING'] = 'NO'
+            config.build_settings['STRIP_INSTALLED_PRODUCT'] = 'NO'
+            config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
+            config.build_settings['SDKROOT'] = 'iphoneos'
+            config.build_settings['ARCHS'] = 'arm64'
+          end
         end
       end
+      aggregate_target.user_project.save
     end
   end
 end
