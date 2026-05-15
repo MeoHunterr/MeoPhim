@@ -64,8 +64,8 @@ jobs:
       - name: Fix Boost Checksum & Install CocoaPods
         run: |
           # URL gốc của JFrog đang bị sập/trả về file lỗi HTML.
-          # Thay thế URL tải Boost bằng bản backup tĩnh trên Github để khắc phục lỗi "Unrecognized archive format"
-          sed -i '' 's|https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2|https://github.com/react-native-community/boost-for-react-native/releases/download/v1.83.0-0/boost_1_83_0.tar.bz2|g' node_modules/react-native/third-party-podspecs/boost.podspec
+          # Thay thế URL tải Boost bằng bản backup tĩnh trên archives.boost.io để khắc phục lỗi "Unrecognized archive format"
+          sed -i '' 's|https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2|https://archives.boost.io/release/1.83.0/source/boost_1_83_0.tar.bz2|g' node_modules/react-native/third-party-podspecs/boost.podspec
           
           cd ios
           pod cache clean boost --all
