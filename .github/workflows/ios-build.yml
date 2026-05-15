@@ -28,7 +28,9 @@ jobs:
           node-version: 24
 
       - name: Install Native Build Tools
-        run: npm install -g node-gyp
+        run: |
+          npm config set legacy-peer-deps true
+          npm install -g node-gyp
 
       - name: Initialize Native iOS & Config Files
         run: |
@@ -48,7 +50,7 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: Nodeify Node Modules
-        run: npx rn-nodeify --install --hack
+        run: npx rn-nodeify --install --hack --force
 
       - name: Cache CocoaPods
         uses: actions/cache@v4
