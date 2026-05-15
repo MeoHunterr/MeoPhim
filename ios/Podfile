@@ -6,6 +6,7 @@ require Pod::Executable.execute_command('node', ['-p',
   )', __dir__]).strip
 
 platform :ios, min_ios_version_supported
+project 'MeoPhim.xcodeproj'
 prepare_react_native_project!
 
 # If you are using a `react-native-flipper` your iOS build will fail when `NO_FLIPPER=1` is set.
@@ -25,7 +26,7 @@ if linkage != nil
   use_frameworks! :linkage => linkage.to_sym
 end
 
-target 'MeoTemp' do
+target 'MeoPhim' do
   config = use_native_modules!
 
   use_react_native!(
@@ -39,7 +40,7 @@ target 'MeoTemp' do
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
-  target 'MeoTempTests' do
+  target 'MeoPhimTests' do
     inherit! :complete
     # Pods for testing
   end
@@ -51,5 +52,23 @@ target 'MeoTemp' do
       config[:reactNativePath],
       :mac_catalyst_enabled => false
     )
+    
+    installer.aggregate_targets.each do |aggregate_target|
+      aggregate_target.user_project.targets.each do |target|
+        if target.name == 'MeoPhim'
+          target.build_configurations.each do |config|
+            config.build_settings['ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES'] = 'YES'
+            config.build_settings['LIBRARY_SEARCH_PATHS'] ||= ['$(inherited)']
+            config.build_settings['LIBRARY_SEARCH_PATHS'] << '"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)"'
+            config.build_settings['LIBRARY_SEARCH_PATHS'] << '"$(SDKROOT)/usr/lib/swift"'
+            config.build_settings['OTHER_LDFLAGS'] ||= ['$(inherited)']
+            config.build_settings['OTHER_LDFLAGS'] << '-ObjC' << '-lc++'
+            config.build_settings['OTHER_LDFLAGS'] << '-framework' << 'CoreAudio' << '-framework' << 'AudioToolbox' << '-framework' << 'AVFoundation'
+            config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
+          end
+        end
+      end
+      aggregate_target.user_project.save
+    end
   end
 end
