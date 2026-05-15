@@ -35,13 +35,16 @@ target 'MeoPhim' do
       end
 
       target.build_configurations.each do |config|
-        # Sửa lỗi Linking và Frameworks hệ thống
-        config.build_settings['OTHER_LDFLAGS'] ||= ['$(inherited)']
-        config.build_settings['OTHER_LDFLAGS'] += ['-lc++', '-lsqlite3', '-lz', '-framework CoreAudio', '-framework AudioToolbox', '-framework AVFoundation', '-Wl,-weak_framework,CoreAudioTypes', '-Wl,-flat_namespace,-undefined,suppress']
+        # Ép IPHONEOS_DEPLOYMENT_TARGET về 16.0 cho tính tương thích
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
+
+        # Sửa lỗi Linking và Frameworks hệ thống (Dùng .join(' ') để tránh lỗi No implicit conversion of Array into String)
+        ldflags = ['$(inherited)', '-lc++', '-lsqlite3', '-lz', '-framework CoreAudio', '-framework AudioToolbox', '-framework AVFoundation', '-Wl,-weak_framework,CoreAudioTypes', '-Wl,-flat_namespace,-undefined,suppress']
+        config.build_settings['OTHER_LDFLAGS'] = ldflags.join(' ')
         
         # Thêm LIBRARY_SEARCH_PATHS để tìm đúng Swift runtime
-        config.build_settings['LIBRARY_SEARCH_PATHS'] ||= ['$(inherited)']
-        config.build_settings['LIBRARY_SEARCH_PATHS'] += ['"$(SDKROOT)/usr/lib/swift"', '"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)"']
+        lib_paths = ['$(inherited)', '"$(SDKROOT)/usr/lib/swift"', '"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)"']
+        config.build_settings['LIBRARY_SEARCH_PATHS'] = lib_paths.join(' ')
         
         # Cấu hình Build cho TrollStore (No stripping)
         config.build_settings['SDKROOT'] = 'iphoneos'
