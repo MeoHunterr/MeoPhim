@@ -66,11 +66,6 @@ jobs:
             --assets-dest ios/assets \
             --reset-cache
 
-      - name: Ensure Dummy.swift Exists
-        run: |
-          mkdir -p ios/MeoPhim
-          echo "import Foundation" > ios/MeoPhim/Dummy.swift
-
       - name: Fix Boost Checksum & Install CocoaPods
         run: |
           # URL gốc của JFrog đang bị sập/trả về file lỗi HTML.
@@ -88,6 +83,52 @@ jobs:
           pod cache clean --all
           pod install --repo-update
 
+      - name: Inject Swift Support into Xcode Project
+        run: |
+          gem install xcodeproj
+          ruby -e "
+          require 'xcodeproj'
+          proj = Xcodeproj::Project.open('ios/MeoPhim.xcodeproj')
+          target = proj.targets.find { |t| t.name == 'MeoPhim' }
+          
+          # Tạo thư mục MeoPhim nếu chưa có
+          Dir.mkdir('ios/MeoPhim') unless Dir.exist?('ios/MeoPhim')
+          File.write('ios/MeoPhim/Dummy.swift', 'import Foundation')
+          
+          # Tìm hoặc tạo group MeoPhim
+          group = proj.main_group.children.find { |c| c.name == 'MeoPhim' || c.path == 'MeoPhim' }
+          if group.nil?
+            group = proj.main_group.new_group('MeoPhim', 'MeoPhim')
+          end
+          
+          # Đăng ký file Dummy.swift vào project và target
+          unless group.files.any? { |f| f.path == 'Dummy.swift' }
+            file_ref = group.new_file('Dummy.swift')
+            target.source_build_phase.add_file_reference(file_ref, true)
+          end
+          
+          # Cấu hình Build Settings cho target chính để Link C++ và Swift
+          target.build_configurations.each do |config|
+            config.build_settings['ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES'] = 'YES'
+            config.build_settings['OTHER_LDFLAGS'] ||= ['$(inherited)']
+            config.build_settings['OTHER_LDFLAGS'] << '-lc++'
+            config.build_settings['OTHER_LDFLAGS'] << '-ObjC'
+            config.build_settings['OTHER_LDFLAGS'] << '-framework' << 'CoreAudio'
+            config.build_settings['OTHER_LDFLAGS'] << '-framework' << 'AudioToolbox'
+            config.build_settings['OTHER_LDFLAGS'] << '-framework' << 'AVFoundation'
+            config.build_settings['OTHER_LDFLAGS'] << '-framework' << 'Network'
+            
+            config.build_settings['LIBRARY_SEARCH_PATHS'] ||= ['$(inherited)']
+            config.build_settings['LIBRARY_SEARCH_PATHS'] << '\"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)\"'
+            config.build_settings['LIBRARY_SEARCH_PATHS'] << '\"$(SDKROOT)/usr/lib/swift\"'
+            
+            config.build_settings['DEAD_CODE_STRIPPING'] = 'NO'
+            config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
+          end
+          
+          proj.save
+          "
+
       - name: Build App Bundle (Unsigned)
         run: |
           set -o pipefail
@@ -104,7 +145,7 @@ jobs:
             AD_HOC_CODE_SIGNING_ALLOWED=YES \
             GENERATE_INFOPLIST_FILE=YES \
             CODE_SIGN_ENTITLEMENTS=ios/MeoPhim.entitlements \
-            clean build | xcpretty
+            clean build
 
       - name: Package IPA for TrollStore
         run: |
