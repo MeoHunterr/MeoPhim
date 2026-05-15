@@ -26,7 +26,7 @@ target 'MeoPhim' do
       :mac_catalyst_enabled => false
     )
 
-    # Fix duplicate symbol arm64 (GCDAsyncSocket) and configure Swift/Linking
+    # Configure all targets
     installer.pods_project.targets.each do |target|
       # Fix lỗi leveldb-library
       if target.name == 'leveldb-library'
@@ -51,11 +51,13 @@ target 'MeoPhim' do
       end
 
       target.build_configurations.each do |config|
-        # Ép IPHONEOS_DEPLOYMENT_TARGET về 16.0 cho tính tương thích
+        # Ép tất cả target dùng SDK iPhone thật và kiến trúc arm64
+        config.build_settings['SDKROOT'] = 'iphoneos'
+        config.build_settings['ARCHS'] = 'arm64'
         config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
 
         # Sửa lỗi Linking và Frameworks hệ thống
-        ldflags = ['$(inherited)', '-lc++', '-lsqlite3', '-lz', '-framework CoreAudio', '-framework AudioToolbox', '-framework AVFoundation', '-Wl,-weak_framework,CoreAudioTypes', '-Wl,-flat_namespace,-undefined,suppress']
+        ldflags = ['$(inherited)', '-lc++', '-lsqlite3', '-lz', '-framework CoreAudio', '-framework CoreAudioTypes', '-framework AudioToolbox', '-framework AVFoundation', '-Wl,-flat_namespace,-undefined,suppress']
         config.build_settings['OTHER_LDFLAGS'] = ldflags.join(' ')
         
         # Thêm LIBRARY_SEARCH_PATHS để tìm đúng Swift runtime
@@ -63,7 +65,6 @@ target 'MeoPhim' do
         config.build_settings['LIBRARY_SEARCH_PATHS'] = lib_paths.join(' ')
         
         # Cấu hình Build cho TrollStore (No stripping)
-        config.build_settings['SDKROOT'] = 'iphoneos'
         config.build_settings['DEAD_CODE_STRIPPING'] = 'NO'
         config.build_settings['STRIP_INSTALLED_PRODUCT'] = 'NO'
 
