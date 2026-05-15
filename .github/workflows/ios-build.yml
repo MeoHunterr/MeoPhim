@@ -1,0 +1,67 @@
+name: Build iOS TrollStore IPA
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build iOS
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Install Node Modules
+        run: npm ci
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v3
+        with:
+          path: ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install --repo-update
+        
+      - name: Build Archive
+        run: |
+          xcodebuild -workspace ios/MeoPhim.xcworkspace \
+            -scheme MeoPhim \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath $PWD/build/MeoPhim.xcarchive \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            archive | xcpretty
+
+      - name: Export IPA
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath $PWD/build/MeoPhim.xcarchive \
+            -exportOptionsPlist ios/ExportOptions.plist \
+            -exportPath $PWD/build/output \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+            
+      - name: Prepare TrollStore IPA (Fake Sign Bypass)
+        run: |
+          cd build/output
+          mv MeoPhim.ipa MeoPhim_TrollStore.ipa
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: MeoPhim-TrollStore-IPA
+          path: build/output/MeoPhim_TrollStore.ipa

@@ -1,0 +1,25 @@
+# MacOS
+.DS_Store
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Android
+.gradle/
+build/
+*.iml
+*.apk
+*.aar
+
+# iOS
+Pods/
+build/
+*.xcworkspace
+*.xcscheme
+*.xcuserstate
+
+# Project specific
+.env
+meophim_vcache/
