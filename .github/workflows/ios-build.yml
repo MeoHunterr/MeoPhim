@@ -36,8 +36,8 @@ jobs:
       - name: Fix Boost Source & Checksum
         run: |
           cd node_modules/react-native/third-party-podspecs
-          # Thay đổi URL tải sang mirror ổn định hơn
-          sed -i.bak -e 's|https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2|https://repo1.maven.org/maven2/org/boost/boost/1.83.0/boost-1.83.0.tar.bz2|g' boost.podspec
+          # Sử dụng link mirror cực kỳ ổn định từ GitHub
+          sed -i.bak -e 's|https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2|https://github.com/react-native-community/boost-for-react-native/releases/download/v1.83.0-0/boost_1_83_0.tar.bz2|g' boost.podspec
           # Cập nhật SHA256 tương ứng
           sed -i.bak -e 's/6478edfe2f3305127cffe8caf73ea0176c53769f4bf1585be237eb30798c3b8e/1c162b579a423fa6876c6c5bc16d39ab4bc05e28898977a0a6af345f523f6357/g' boost.podspec
 
