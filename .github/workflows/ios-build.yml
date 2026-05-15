@@ -96,13 +96,22 @@ jobs:
       - name: Package IPA for TrollStore
         run: |
           APP_PATH=$(find build/Build/Products/Release-iphoneos -name "*.app" | head -n 1)
-          # Đảm bảo main.jsbundle có mặt trong payload
+          
           if [ ! -f "$APP_PATH/main.jsbundle" ]; then
             cp ios/main.jsbundle "$APP_PATH/"
           fi
           
           mkdir -p build/Payload
-          cp -R "$APP_PATH" build/Payload/
+          xcrun ditto "$APP_PATH" "build/Payload/$(basename "$APP_PATH")"
+          
+          # BẮT ĐẦU FIX DYLD CRASH:
+          # Tìm và ký Ad-hoc toàn bộ các thư viện động bên trong app
+          find "build/Payload/$(basename "$APP_PATH")" -type d -name "*.framework" -exec /usr/bin/codesign --force --sign - {} \;
+          find "build/Payload/$(basename "$APP_PATH")" -type f -name "*.dylib" -exec /usr/bin/codesign --force --sign - {} \;
+          
+          # Ký Ad-hoc cho cả lớp vỏ App ngoài cùng
+          /usr/bin/codesign --force --sign - "build/Payload/$(basename "$APP_PATH")"
+          
           cd build
           zip -qr MeoPhim_TrollStore_v${{ github.run_number }}.ipa Payload
 
