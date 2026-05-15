@@ -20,10 +20,9 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Đảm bảo môi trường build native cho các thư viện như react-native-leveldown
       - name: Install Native Build Tools
         run: |
-          brew install node-gyp
+          npm install -g node-gyp
           npm config set python python3
 
       - name: Generate Package Lock
@@ -52,35 +51,31 @@ jobs:
           cd ios
           pod install --repo-update
         
-      - name: Build Archive
+      - name: Build App Bundle (Unsigned)
         run: |
           xcodebuild -workspace ios/MeoPhim.xcworkspace \
             -scheme MeoPhim \
             -configuration Release \
             -sdk iphoneos \
-            -archivePath $PWD/build/MeoPhim.xcarchive \
+            -derivedDataPath build \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
             IPHONEOS_DEPLOYMENT_TARGET=16.0 \
-            archive | xcpretty
+            clean build | xcpretty
 
-      - name: Export IPA
+      - name: Package IPA for TrollStore
         run: |
-          xcodebuild -exportArchive \
-            -archivePath $PWD/build/MeoPhim.xcarchive \
-            -exportOptionsPlist ios/ExportOptions.plist \
-            -exportPath $PWD/build/output \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
-            
-      - name: Prepare TrollStore IPA (Naming v${{ github.run_number }})
-        run: |
-          cd build/output
-          find . -name "*.ipa" -exec mv {} MeoPhim_TrollStore_v${{ github.run_number }}.ipa \;
+          mkdir -p build/Payload
+          # Copy the .app bundle to Payload folder
+          cp -r build/Build/Products/Release-iphoneos/*.app build/Payload/
+          cd build
+          zip -r MeoPhim_TrollStore_v${{ github.run_number }}.ipa Payload
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: MeoPhim-Build-v${{ github.run_number }}
-          path: build/output/MeoPhim_TrollStore_v${{ github.run_number }}.ipa
+          path: build/MeoPhim_TrollStore_v${{ github.run_number }}.ipa
           retention-days: 7
