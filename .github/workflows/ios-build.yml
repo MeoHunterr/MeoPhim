@@ -65,7 +65,17 @@ jobs:
           cd ios
           pod cache clean boost --all
           pod install --repo-update
-        
+
+      - name: Bundle JS for iOS
+        run: |
+          mkdir -p ios/assets
+          npx react-native bundle \
+            --platform ios \
+            --dev false \
+            --entry-file index.js \
+            --bundle-output ios/main.jsbundle \
+            --assets-dest ios/assets
+
       - name: Build App Bundle (Unsigned)
         run: |
           set -o pipefail
@@ -79,12 +89,27 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             AD_HOC_CODE_SIGNING_ALLOWED=YES \
             IPHONEOS_DEPLOYMENT_TARGET=16.0 \
+            GENERATE_INFOPLIST_FILE=YES \
+            ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES=YES \
+            CODE_SIGN_ENTITLEMENTS=ios/MeoPhim.entitlements \
             clean build | xcpretty
 
       - name: Package IPA for TrollStore
         run: |
+          # Đảm bảo main.jsbundle được copy vào bundle app nếu Xcode build bỏ qua
+          APP_PATH=$(find build/Build/Products/Release-iphoneos -name "*.app" | head -n 1)
+          if [ ! -f "$APP_PATH/main.jsbundle" ]; then
+            echo "Manually copying main.jsbundle to $APP_PATH"
+            cp ios/main.jsbundle "$APP_PATH/"
+          fi
+          
+          # Copy assets nếu cần
+          if [ -d "ios/assets" ]; then
+            cp -R ios/assets/* "$APP_PATH/" || true
+          fi
+
           mkdir -p build/Payload
-          cp -R build/Build/Products/Release-iphoneos/*.app build/Payload/
+          cp -R "$APP_PATH" build/Payload/
           cd build
           zip -qr MeoPhim_TrollStore_v${{ github.run_number }}.ipa Payload
 
