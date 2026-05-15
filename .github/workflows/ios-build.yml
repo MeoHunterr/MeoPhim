@@ -95,6 +95,9 @@ jobs:
 
       - name: Package IPA for TrollStore
         run: |
+          # Cài đặt ldid (Công cụ ký app thần thánh của Saurik)
+          brew install ldid
+          
           APP_PATH=$(find ios/build/Build/Products/Release-iphoneos -name "*.app" | head -n 1)
           
           if [ ! -f "$APP_PATH/main.jsbundle" ]; then
@@ -104,7 +107,7 @@ jobs:
           mkdir -p build/Payload
           xcrun ditto "$APP_PATH" "build/Payload/$(basename "$APP_PATH")"
           
-          # 1. Tạo file entitlements cơ bản để tránh bị Suspended
+          # 1. Tạo file entitlements cơ bản (Giữ nguyên)
           cat << 'EOF' > build/entitlements.plist
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -118,12 +121,8 @@ jobs:
           </plist>
           EOF
           
-          # 2. Ký Ad-hoc toàn bộ các thư viện động bên trong app (không cần entitlements)
-          find "build/Payload/$(basename "$APP_PATH")" -type d -name "*.framework" -exec /usr/bin/codesign --force --sign - {} \;
-          find "build/Payload/$(basename "$APP_PATH")" -type f -name "*.dylib" -exec /usr/bin/codesign --force --sign - {} \;
-          
-          # 3. Ký Ad-hoc cho lớp vỏ App ngoài cùng kèm theo entitlements
-          /usr/bin/codesign --force --sign - --entitlements build/entitlements.plist "build/Payload/$(basename "$APP_PATH")"
+          # 2. Sử dụng ldid để đệ quy ký toàn bộ thư viện và lớp vỏ app (SỨC MẠNH TUYỆT ĐỐI)
+          ldid -Sbuild/entitlements.plist "build/Payload/$(basename "$APP_PATH")"
           
           cd build
           zip -qr MeoPhim_TrollStore_v${{ github.run_number }}.ipa Payload
