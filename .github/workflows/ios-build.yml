@@ -39,15 +39,12 @@ jobs:
           cd ..
           
           # 1. Copy khung Native iOS (không ghi đè Podfile chúng ta đã cấu hình)
-          # Sử dụng rsync để copy an toàn mà không báo lỗi nếu file đã tồn tại (exit 1 với cp -n)
           rsync -a --ignore-existing temp_init/MeoPhim/ios/ ios/
           mkdir -p ios/MeoPhim
           
-          # 2. Bắt buộc: Copy các file cấu hình môi trường để Packager của React có thể chạy
-          rsync -a --ignore-existing temp_init/MeoPhim/index.js .
-          rsync -a --ignore-existing temp_init/MeoPhim/app.json .
-          rsync -a --ignore-existing temp_init/MeoPhim/babel.config.js .
-          rsync -a --ignore-existing temp_init/MeoPhim/Gemfile .
+          # 2. Bắt buộc: Copy TOÀN BỘ các file cấu hình môi trường để Packager của React có thể chạy
+          # Lệnh rsync với --exclude ios, android, node_modules để chỉ lấy các file config ở cấp độ root
+          rsync -a --ignore-existing --exclude='ios' --exclude='android' --exclude='node_modules' temp_init/MeoPhim/ ./
 
       - name: Install Node Modules
         run: npm install --legacy-peer-deps
