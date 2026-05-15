@@ -7,7 +7,6 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  # Xác định biến môi trường PYTHON nếu node-gyp cần
   PYTHON: python3
 
 jobs:
@@ -22,20 +21,26 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install Native Build Tools
-        run: |
-          npm install -g node-gyp
-          # Bỏ lệnh 'npm config set python python3' vì npm v9+ không còn hỗ trợ cấu hình này.
-
-      - name: Generate Package Lock
-        run: npm install --package-lock-only --legacy-peer-deps
-
       - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: 'npm'
-          cache-dependency-path: package-lock.json
+
+      - name: Install Native Build Tools
+        run: npm install -g node-gyp
+
+      - name: Initialize Native iOS Files
+        run: |
+          mkdir -p temp_init
+          cd temp_init
+          npx react-native@0.73.1 init MeoPhim --version 0.73.1 --skip-install --install-pods false
+          cd ..
+          cp -rn temp_init/MeoPhim/ios/* ios/
+          mkdir -p ios/MeoPhim
+
+      - name: Generate Package Lock
+        run: npm install --package-lock-only --legacy-peer-deps
 
       - name: Install Node Modules
         run: npm install --legacy-peer-deps
@@ -55,7 +60,6 @@ jobs:
         
       - name: Build App Bundle (Unsigned)
         run: |
-          # Đảm bảo không có lỗi xcpretty bằng cách bắt lỗi exit của xcodebuild
           set -o pipefail
           xcodebuild -workspace ios/MeoPhim.xcworkspace \
             -scheme MeoPhim \
@@ -72,8 +76,6 @@ jobs:
       - name: Package IPA for TrollStore
         run: |
           mkdir -p build/Payload
-          # Copy the .app bundle to Payload folder. 
-          # Sử dụng cp -R thay vì cp -r cho an toàn trên MacOS
           cp -R build/Build/Products/Release-iphoneos/*.app build/Payload/
           cd build
           zip -qr MeoPhim_TrollStore_v${{ github.run_number }}.ipa Payload
