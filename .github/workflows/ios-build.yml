@@ -11,10 +11,10 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: 'npm'
@@ -23,7 +23,7 @@ jobs:
         run: npm ci
 
       - name: Cache CocoaPods
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ios/Pods
           key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
@@ -44,6 +44,7 @@ jobs:
             -archivePath $PWD/build/MeoPhim.xcarchive \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
+            IPHONEOS_DEPLOYMENT_TARGET=16.0 \
             archive | xcpretty
 
       - name: Export IPA
@@ -55,13 +56,14 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO
             
-      - name: Prepare TrollStore IPA (Fake Sign Bypass)
+      - name: Prepare TrollStore IPA (Rename for uniqueness)
         run: |
           cd build/output
-          mv MeoPhim.ipa MeoPhim_TrollStore.ipa
+          mv *.ipa MeoPhim-Build-${{ github.run_number }}.ipa
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: MeoPhim-TrollStore-IPA
-          path: build/output/MeoPhim_TrollStore.ipa
+          name: MeoPhim-IPA-Build-${{ github.run_number }}
+          path: build/output/MeoPhim-Build-${{ github.run_number }}.ipa
+          retention-days: 7
