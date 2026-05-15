@@ -33,6 +33,13 @@ target 'MeoPhim' do
           config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)', 'GCDAsyncSocket=MeoGCDAsyncSocket']
         end
       end
+
+      # Sửa lỗi CoreAudioTypes và Symbols
+      target.build_configurations.each do |config|
+        config.build_settings['OTHER_LDFLAGS'] ||= ['$(inherited)', '-framework CoreAudio', '-framework CoreAudioTypes', '-framework AVFoundation', '-framework AudioToolbox']
+        # Đảm bảo build đúng cho máy thật (iPhone)
+        config.build_settings['SDKROOT'] = 'iphoneos'
+      end
     end
   end
 end
