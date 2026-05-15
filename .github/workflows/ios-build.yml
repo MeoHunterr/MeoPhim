@@ -55,10 +55,11 @@ jobs:
       - name: Install CocoaPods
         run: |
           cd ios
-          pod install --repo-update
+          NO_FLIPPER=1 pod install --repo-update
 
       - name: Build App (Unsigned)
         run: |
+          set -eo pipefail
           xcodebuild -workspace ios/MeoPhim.xcworkspace \
             -scheme MeoPhim \
             -configuration Release \
