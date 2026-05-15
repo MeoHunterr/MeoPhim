@@ -61,9 +61,7 @@ target 'MeoPhim' do
             
             # Quan trọng nhất: Ép link mọi symbols từ Objective-C
             config.build_settings['OTHER_LDFLAGS'] ||= ['$(inherited)']
-            config.build_settings['OTHER_LDFLAGS'] << '-ObjC'
-            config.build_settings['OTHER_LDFLAGS'] << '-all_load'
-            config.build_settings['OTHER_LDFLAGS'] << '-lc++'
+            config.build_settings['OTHER_LDFLAGS'] << '-ObjC' << '-all_load' << '-lc++' << '-lc++abi'
             config.build_settings['OTHER_LDFLAGS'] << '-framework' << 'CoreAudio' << '-framework' << 'AudioToolbox' << '-framework' << 'AVFoundation'
             
             # Đảm bảo đường dẫn Pods được ưu tiên
