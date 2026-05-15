@@ -28,7 +28,7 @@ jobs:
           # Bỏ lệnh 'npm config set python python3' vì npm v9+ không còn hỗ trợ cấu hình này.
 
       - name: Generate Package Lock
-        run: npm install --package-lock-only
+        run: npm install --package-lock-only --legacy-peer-deps
 
       - name: Setup Node.js 24
         uses: actions/setup-node@v4
