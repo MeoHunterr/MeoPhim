@@ -42,9 +42,7 @@ jobs:
           rsync -a --ignore-existing temp_init/MeoPhim/ios/ ios/
           mkdir -p ios/MeoPhim
           
-          # 2. Bắt buộc: Copy TOÀN BỘ các file cấu hình môi trường để Packager của React có thể chạy
-          # Lệnh rsync với --exclude ios, android, node_modules để chỉ lấy các file config ở cấp độ root
-          rsync -a --ignore-existing --exclude='ios' --exclude='android' --exclude='node_modules' temp_init/MeoPhim/ ./
+          # 2. Xóa các file rsync ở đây vì đã tạo thủ công trong repo
 
       - name: Install Node Modules
         run: npm install --legacy-peer-deps
