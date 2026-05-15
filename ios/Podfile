@@ -58,10 +58,11 @@ target 'MeoPhim' do
           target.build_configurations.each do |config|
             config.build_settings['ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES'] = 'YES'
             config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
+            config.build_settings['DEAD_CODE_STRIPPING'] = 'YES'
             
             # Quan trọng nhất: Ép link mọi symbols từ Objective-C
             config.build_settings['OTHER_LDFLAGS'] ||= ['$(inherited)']
-            config.build_settings['OTHER_LDFLAGS'] << '-ObjC' << '-all_load' << '-lc++' << '-lc++abi'
+            config.build_settings['OTHER_LDFLAGS'] << '-ObjC' << '-lc++' << '-lc++abi'
             config.build_settings['OTHER_LDFLAGS'] << '-framework' << 'CoreAudio' << '-framework' << 'AudioToolbox' << '-framework' << 'AVFoundation'
             
             # Đảm bảo đường dẫn Pods được ưu tiên
