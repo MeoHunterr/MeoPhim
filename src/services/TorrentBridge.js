@@ -1,97 +1,96 @@
-import WebTorrent from 'react-native-webtorrent';
+import './globals'; // Inject Polyfills đầu tiên
+import WebTorrent from 'webtorrent';
 import RNFS from 'react-native-fs';
+import StaticServer from 'react-native-static-server';
 import { EventEmitter } from 'events';
 
 class TorrentBridge extends EventEmitter {
   constructor() {
     super();
-    this.client = new WebTorrent({
-      maxConns: 50, // Tối ưu băng thông 4G/5G, không quá cao gây nghẽn
-      downloadLimit: -1, // Không giới hạn tốc độ tải
-      uploadLimit: 512 * 1024, // Giới hạn upload 500KB/s để tiết kiệm pin & CPU
-      tracker: true,
-      dht: true,
-      webSeeds: false, // Tắt webseeds nếu không dùng đến để giảm overhead mạng
-    });
+    this.client = null;
     this.server = null;
     this.currentTorrent = null;
-    this.cachePath = `${RNFS.CachesDirectoryPath}/meophim_vcache`;
     this.port = 8888;
+    this.cachePath = `${RNFS.CachesDirectoryPath}/meophim_vcache`;
+  }
+
+  /**
+   * Khởi tạo WebTorrent Client với TCP/UDP Sockets
+   */
+  initClient() {
+    if (!this.client) {
+      this.client = new WebTorrent({
+        // WebTorrent sẽ tự động sử dụng 'net' và 'dgram' đã được Metro polyfill sang tcp-socket và udp
+        maxConns: 50,
+      });
+    }
   }
 
   async startStream(magnetUri) {
-    return new Promise((resolve, reject) => {
-      // 1. Dọn dẹp torrent cũ và cache dư thừa
-      this.stop();
+    this.initClient();
+    this.stop(); // Dọn dẹp phiên cũ
 
-      console.log('[TorrentBridge] Initiating magnet:', magnetUri);
+    return new Promise(async (resolve, reject) => {
+      try {
+        // Đảm bảo thư mục cache tồn tại
+        if (!(await RNFS.exists(this.cachePath))) {
+          await RNFS.mkdir(this.cachePath);
+        }
 
-      this.client.add(magnetUri, { path: this.cachePath }, (torrent) => {
-        this.currentTorrent = torrent;
+        console.log('[TorrentBridge] Adding torrent:', magnetUri);
 
-        // 2. Tìm file video chính
-        const file = torrent.files.find(f => 
-          /\.(mp4|mkv|avi|mov)$/i.test(f.name)
-        ) || torrent.files[0];
+        this.client.add(magnetUri, { path: this.cachePath }, (torrent) => {
+          this.currentTorrent = torrent;
 
-        // 3. TRIỂN KHAI SEQUENTIAL SELECTION
-        // Trong engine webtorrent, việc gọi file.select() với ưu tiên cao 
-        // và createReadStream (của server) sẽ ép tải các piece đầu.
-        file.select(); 
-        
-        // 4. Khởi tạo HTTP Server hỗ trợ Range Requests
-        this.server = torrent.createServer();
-        this.server.listen(this.port, () => {
-          const streamUrl = `http://localhost:${this.port}/0`;
-          console.log('[TorrentBridge] Server active at:', streamUrl);
-          resolve(streamUrl);
-        });
+          // Tìm file video
+          const file = torrent.files.find(f => /\.(mp4|mkv|avi|mov)$/i.test(f.name)) || torrent.files[0];
 
-        // 5. Phát tín hiệu stats thời gian thực
-        torrent.on('download', () => {
-          this.emit('stats', {
-            downloadSpeed: (torrent.downloadSpeed / 1024 / 1024).toFixed(2) + ' MB/s',
-            progress: (torrent.progress * 100).toFixed(1) + '%',
-            numPeers: torrent.numPeers,
-            downloaded: (torrent.downloaded / 1024 / 1024).toFixed(1) + ' MB',
+          // Ưu tiên tải tuần tự (Sequential)
+          file.select();
+          
+          // Tạo HTTP Server để stream dữ liệu
+          // WebTorrent Web API createServer() tạo ra một Node-style server
+          // Trong RN, ta cần ánh xạ dữ liệu này qua StaticServer hoặc dùng stream trực tiếp nếu hỗ trợ
+          // Ở đây ta dùng giải pháp StaticServer stream từ file đang tải
+          
+          if (!this.server) {
+            // StaticServer trong RN thường dùng để phục vụ file tĩnh
+            // Để stream P2P hiệu quả, ta sử dụng server tích hợp của WebTorrent (đã được polyfill net/http)
+            const torrentServer = torrent.createServer();
+            torrentServer.listen(this.port, '127.0.0.1', () => {
+              const streamUrl = `http://127.0.0.1:${this.port}/0`;
+              console.log('[TorrentBridge] Streaming at:', streamUrl);
+              resolve(streamUrl);
+            });
+            this.server = torrentServer;
+          }
+
+          torrent.on('download', () => {
+            this.emit('stats', {
+              downloadSpeed: (torrent.downloadSpeed / 1024 / 1024).toFixed(2) + ' MB/s',
+              progress: (torrent.progress * 100).toFixed(1) + '%',
+              numPeers: torrent.numPeers,
+            });
           });
         });
-
-        // Xử lý lỗi trong quá trình tải
-        torrent.on('error', (err) => {
-          console.error('[TorrentBridge] Torrent Error:', err);
-          this.emit('error', err);
-        });
-      });
-
-      this.client.on('error', (err) => {
-        console.error('[TorrentBridge] Client Error:', err);
+      } catch (err) {
+        console.error('[TorrentBridge] Start Error:', err);
         reject(err);
-      });
+      }
     });
   }
 
   stop() {
-    try {
-      if (this.currentTorrent) {
-        this.currentTorrent.destroy();
-        this.currentTorrent = null;
-      }
-      if (this.server) {
-        this.server.close();
-        this.server = null;
-      }
-      // Xóa cache để bảo vệ bộ nhớ iPhone
-      RNFS.exists(this.cachePath).then(exists => {
-        if (exists) RNFS.unlink(this.cachePath).catch(() => {});
-      });
-      this.removeAllListeners('stats');
-    } catch (e) {
-      console.warn('[TorrentBridge] Stop Error:', e);
+    if (this.currentTorrent) {
+      this.currentTorrent.destroy();
+      this.currentTorrent = null;
     }
+    if (this.server) {
+      this.server.close();
+      this.server = null;
+    }
+    // Không xóa cachePath ở đây để tránh crash khi đang đóng
   }
 }
 
-// Singleton pattern
-const instance = new TorrentBridge();
-export default instance;
+export default new TorrentBridge();
