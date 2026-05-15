@@ -52,6 +52,19 @@ jobs:
             sed -i.bak 's/MeoTemp/MeoPhim/g' MeoPhim.xcodeproj/xcshareddata/xcschemes/MeoPhim.xcscheme
           fi
 
+      - name: Fix AppDelegate & Splash Screen
+        run: |
+          cd ios
+          # Sửa moduleName trong AppDelegate để tránh crash
+          if [ -f "MeoPhim/AppDelegate.mm" ]; then
+            sed -i.bak 's/MeoTemp/MeoPhim/g' MeoPhim/AppDelegate.mm
+          fi
+          
+          # Sửa chữ trên màn hình Splash Screen
+          if [ -f "MeoPhim/LaunchScreen.storyboard" ]; then
+            sed -i.bak 's/MeoTemp/MeoPhim/g' MeoPhim/LaunchScreen.storyboard
+          fi
+
       - name: Install CocoaPods
         run: |
           cd ios
