@@ -38,6 +38,19 @@ jobs:
           cd node_modules/react-native/third-party-podspecs
           sed -i.bak -e 's/6478edfe2f3305127cffe8caf73ea0176c53769f4bf1585be237eb30798c3b8e/1c162b579a423fa6876c6c5bc16d39ab4bc05e28898977a0a6af345f523f6357/g' boost.podspec
 
+      - name: Rename Xcode Targets (MeoTemp -> MeoPhim)
+        run: |
+          cd ios
+          # Thay thế toàn bộ chữ MeoTemp thành MeoPhim bên trong file cấu hình lõi
+          sed -i.bak 's/MeoTemp/MeoPhim/g' MeoPhim.xcodeproj/project.pbxproj
+          
+          # Đổi tên file Scheme (nếu có)
+          mkdir -p MeoPhim.xcodeproj/xcshareddata/xcschemes/
+          if [ -f "MeoPhim.xcodeproj/xcshareddata/xcschemes/MeoTemp.xcscheme" ]; then
+            mv MeoPhim.xcodeproj/xcshareddata/xcschemes/MeoTemp.xcscheme MeoPhim.xcodeproj/xcshareddata/xcschemes/MeoPhim.xcscheme
+            sed -i.bak 's/MeoTemp/MeoPhim/g' MeoPhim.xcodeproj/xcshareddata/xcschemes/MeoPhim.xcscheme
+          fi
+
       - name: Install CocoaPods
         run: |
           cd ios
