@@ -35,31 +35,14 @@ target 'MeoPhim' do
       :mac_catalyst_enabled => false
     )
 
-    # 1. Ép tất cả các Pods về iOS 16.0 và fix lỗi leveldb
+    # 1. Ép tất cả các Pods về iOS 16.0
     installer.pods_project.targets.each do |target|
-      # Fix lỗi leveldb-library
-      if target.name == 'leveldb-library'
-        target.build_configurations.each do |config|
-          config.build_settings['SKIP_INSTALL'] = 'YES'
-        end
-      end
-
-      # Fix lỗi Resource Bundle
-      if target.respond_to?(:resource_bundle_targets)
-        target.resource_bundle_targets.each do |res_target|
-          res_target.build_configurations.each do |config|
-            config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
-          end
-        end
-      end
-
       target.build_configurations.each do |config|
         config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
-        config.build_settings['ONLY_ACTIVE_ARCH'] = 'NO'
       end
     end
 
-    # 2. HACK TARGET CHÍNH (MeoPhim) ĐỂ SỬA LỖI ARM64 VÀ SWIFT
+    # 2. HACK TARGET CHÍNH (MeoPhim) ĐỂ FIX LỖI ARM64 VÀ COREAUDIO
     installer.aggregate_targets.each do |aggregate_target|
       aggregate_target.user_project.targets.each do |target|
         if target.name == 'MeoPhim'
@@ -75,10 +58,6 @@ target 'MeoPhim' do
             config.build_settings['OTHER_LDFLAGS'] << '-framework' << 'CoreAudio'
             config.build_settings['OTHER_LDFLAGS'] << '-framework' << 'AudioToolbox'
             config.build_settings['OTHER_LDFLAGS'] << '-framework' << 'AVFoundation'
-            
-            config.build_settings['DEAD_CODE_STRIPPING'] = 'NO'
-            config.build_settings['STRIP_INSTALLED_PRODUCT'] = 'NO'
-            config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
           end
         end
       end

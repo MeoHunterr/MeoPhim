@@ -5,41 +5,22 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  PYTHON: python3
-
 jobs:
   build:
     name: Build iOS
     runs-on: macos-latest
-    defaults:
-      run:
-        working-directory: .
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Loại bỏ cache: 'npm' để tránh vòng lặp "gà và trứng" khi chưa có package-lock.json
-      - name: Setup Node.js 24
+      - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 20
 
-      - name: Install Native Build Tools
-        run: |
-          npm config set legacy-peer-deps true
-          npm install -g node-gyp
-
-      - name: Install Node Modules
+      - name: NPM Install
         run: npm install --legacy-peer-deps
-
-      - name: Nodeify Node Modules
-        run: npx rn-nodeify --install --hack --force
-
-      - name: Install Extra Dependencies
-        run: npm install asyncstorage-down --save-dev --legacy-peer-deps
 
       - name: Bundle JS for iOS
         run: |
@@ -52,60 +33,32 @@ jobs:
             --assets-dest ios/assets \
             --reset-cache
 
-      - name: Fix Boost Checksum & Install CocoaPods
+      - name: Install CocoaPods
         run: |
-          # URL gốc của JFrog đang bị sập/trả về file lỗi HTML.
-          # Thay thế URL tải Boost bằng bản backup tĩnh trên archives.boost.io để khắc phục lỗi "Unrecognized archive format"
-          sed -i '' 's|https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2|https://archives.boost.io/release/1.83.0/source/boost_1_83_0.tar.bz2|g' node_modules/react-native/third-party-podspecs/boost.podspec
-          
-          # Dọn dẹp cache cũ triệt để
-          rm -rf ~/Library/Developer/Xcode/DerivedData
-          rm -rf ios/Pods
-          rm -rf ios/Podfile.lock
-          rm -rf ios/build
-          rm -rf build
-          
           cd ios
-          pod cache clean --all
           pod install --repo-update
 
-      - name: Build App Bundle (Unsigned)
+      - name: Build App (Unsigned)
         run: |
-          set -o pipefail
           xcodebuild -workspace ios/MeoPhim.xcworkspace \
             -scheme MeoPhim \
             -configuration Release \
             -sdk iphoneos \
             -derivedDataPath build \
-            -parallelizeTargets \
-            -hideShellScriptEnvironment \
-            CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGN_IDENTITY="" \
-            AD_HOC_CODE_SIGNING_ALLOWED=YES \
-            GENERATE_INFOPLIST_FILE=YES \
-            CODE_SIGN_ENTITLEMENTS=ios/MeoPhim.entitlements \
-            clean build
+            ONLY_ACTIVE_ARCH=NO \
+            clean build | xcpretty
 
       - name: Package IPA for TrollStore
         run: |
-          # Đảm bảo main.jsbundle được copy vào bundle app nếu Xcode build bỏ qua
           APP_PATH=$(find build/Build/Products/Release-iphoneos -name "*.app" | head -n 1)
+          # Đảm bảo main.jsbundle có mặt trong payload
           if [ ! -f "$APP_PATH/main.jsbundle" ]; then
-            echo "Manually copying main.jsbundle to $APP_PATH"
             cp ios/main.jsbundle "$APP_PATH/"
           fi
           
-          # Copy assets nếu cần
-          if [ -d "ios/assets" ]; then
-            cp -R ios/assets/* "$APP_PATH/" || true
-          fi
-
           mkdir -p build/Payload
-          
-          # Thay cp -R bằng xcrun ditto để giữ nguyên cấu trúc Frameworks và symlinks
           xcrun ditto "$APP_PATH" "build/Payload/$(basename "$APP_PATH")"
-          
           cd build
           zip -qr MeoPhim_TrollStore_v${{ github.run_number }}.ipa Payload
 
@@ -113,5 +66,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: MeoPhim-Build-v${{ github.run_number }}
-          path: build/MeoPhim_TrollStore_v${{ github.run_number }}.ipa
+          path: build/*.ipa
           retention-days: 7
