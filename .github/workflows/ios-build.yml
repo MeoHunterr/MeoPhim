@@ -21,26 +21,32 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # Loại bỏ cache: 'npm' để tránh vòng lặp "gà và trứng" khi chưa có package-lock.json
       - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: 'npm'
 
       - name: Install Native Build Tools
         run: npm install -g node-gyp
 
-      - name: Initialize Native iOS Files
+      - name: Initialize Native iOS & Config Files
         run: |
           mkdir -p temp_init
           cd temp_init
-          npx react-native@0.73.1 init MeoPhim --version 0.73.1 --skip-install --install-pods false
+          # Dùng npx --yes để bỏ qua mọi câu hỏi xác nhận từ terminal
+          npx --yes react-native@0.73.1 init MeoPhim --version 0.73.1 --skip-install
           cd ..
+          
+          # 1. Copy khung Native iOS (không ghi đè Podfile chúng ta đã cấu hình)
           cp -rn temp_init/MeoPhim/ios/* ios/
           mkdir -p ios/MeoPhim
-
-      - name: Generate Package Lock
-        run: npm install --package-lock-only --legacy-peer-deps
+          
+          # 2. Bắt buộc: Copy các file cấu hình môi trường để Packager của React có thể chạy
+          cp -n temp_init/MeoPhim/index.js . || true
+          cp -n temp_init/MeoPhim/app.json . || true
+          cp -n temp_init/MeoPhim/babel.config.js . || true
+          cp -n temp_init/MeoPhim/Gemfile . || true
 
       - name: Install Node Modules
         run: npm install --legacy-peer-deps
@@ -49,7 +55,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ios/Pods
-          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') }}
+          # Fallback 'no-lock' để Action không báo lỗi nếu Podfile.lock chưa từng được sinh ra
+          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock') || 'no-lock' }}
           restore-keys: |
             ${{ runner.os }}-pods-
 
