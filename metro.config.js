@@ -1,4 +1,5 @@
 const {getDefaultConfig, mergeConfig} = require('@react-native/metro-config');
+const nodeLibs = require('node-libs-react-native');
 
 /**
  * Metro configuration
@@ -9,11 +10,9 @@ const {getDefaultConfig, mergeConfig} = require('@react-native/metro-config');
 const config = {
   resolver: {
     extraNodeModules: {
-      ...require('node-libs-react-native'),
+      ...nodeLibs,
       net: require.resolve('react-native-tcp-socket'),
       dgram: require.resolve('react-native-udp'),
-      os: require.resolve('react-native-os'),
-      fs: require.resolve('react-native-fs'),
     },
   },
 };
