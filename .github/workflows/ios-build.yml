@@ -77,14 +77,14 @@ jobs:
             -scheme MeoPhim \
             -configuration Release \
             -sdk iphoneos \
-            -derivedDataPath build \
+            -derivedDataPath ios/build \
             CODE_SIGNING_ALLOWED=NO \
             ONLY_ACTIVE_ARCH=NO \
             clean build | xcpretty
 
       - name: Inspect Build Result
         run: |
-          APP_PATH=$(find build/Build/Products/Release-iphoneos -name "*.app" | head -n 1)
+          APP_PATH=$(find ios/build/Build/Products/Release-iphoneos -name "*.app" | head -n 1)
           BINARY_PATH="$APP_PATH/MeoPhim"
           SIZE=$(du -m "$BINARY_PATH" | cut -f1)
           echo "Main Binary Size: ${SIZE}MB"
@@ -95,8 +95,10 @@ jobs:
 
       - name: Package IPA for TrollStore
         run: |
-          APP_PATH=$(find build/Build/Products/Release-iphoneos -name "*.app" | head -n 1)
+          # Tìm đường dẫn file .app vừa build xong
+          APP_PATH=$(find ios/build/Build/Products/Release-iphoneos -name "*.app" | head -n 1)
           
+          # Đảm bảo main.jsbundle có mặt
           if [ ! -f "$APP_PATH/main.jsbundle" ]; then
             cp ios/main.jsbundle "$APP_PATH/"
           fi
