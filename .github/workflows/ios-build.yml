@@ -61,9 +61,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pods-
 
-      - name: Install CocoaPods
+      - name: Fix Boost Checksum & Install CocoaPods
         run: |
           cd ios
+          # Xóa sạch cache của pod Boost để tải lại bản gốc không bị lỗi hash
+          pod cache clean boost --all
+          
+          # Tiến hành cài đặt Pods
           pod install --repo-update
         
       - name: Build App Bundle (Unsigned)
